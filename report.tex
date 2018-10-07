@@ -1,0 +1,240 @@
+\documentclass[a4paper]{article}
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{mathtools}
+\usepackage{subfig}
+\usepackage{array}
+\setlength\extrarowheight{2pt}
+
+\title{Regression Analysis and Resampling Methods}
+\author{Hong Li\\hong.li@geo.uio.no}
+\date{\today}
+
+\setlength{\parindent}{4em}
+\setlength{\parskip}{1em}
+\doublespacing
+\begin{document}
+\maketitle
+\captionsetup[subfigure]{labelformat=empty}
+
+\begin{abstract}
+Regression is the most straightforward method to explore the relationships between a dependent variable and its independent variables. It helps us understand and to predict how the dependent variable changes when the independent variables change. In this report, I perform three types of regression methods, i.e. Ordinary Least Squares (OLS), Ridge regression and Lasso regression to fit Franke's function. The evaluation is based on k-fold cross validation of Mean Squared Error (MSE) and R$^2$ score function. I compare the three regression methods based on two datasets. One is random generated from uniform distribution. Another dataset is Shuttle Radar Topography Mission (SRTM) digital terrain model (DTM). The results show that the three regression methods are comparable in fitting the Franke's function and in interpolating SRTM DTM. More specially, the Ridge regression gives slightly better results. However, it also gives the larges variation in estimate of parameters. The Lasso regression is just opposite. It gives the lowest performance, but highest stability in estimate of parameters. Therefore, it is difficult to say which method is better. To comprise between model performance and parameter stability, the OLS regression is recommended. In interpolating the SRTM DTM, the model accuracy mainly depends on the terrain. When the terrain rises and falls, the model accuracy decreases.
+\end{abstract}
+
+\section{Introduction}\label{sec:introduction}
+Regression analysis is to estimate relationships among variables. It tells how the dependent variable changes with changes in one or more independent variables. The relationship can be linear or non-linear. The technique is widely used for forecasting and time series modeling in different fields. For example, linear regression is used in hydrology to find  how runoff changes with change in precipitation and temperature. Regression is an important method and it can help us to understand how climate change affect water resources and flood.  
+\newline\newline
+There are many forms of regression and seven of them are most commonly used, i.e. Linear Regression, Logistic Regression, Polynomial Regression, stepwise Regression, Ridge Regression, Lasso Regression, ElasticNet Regression \cite{Sunil}. The main difference lies in data assumption and penalty function \cite{Aarshay}. Therefore, the regression methods are suitable under different conditions and for different purposes.
+\newline\newline
+The main aim of this project is to study three regression methods, including the Ordinary Least Squares (OLS) method, Ridge regression and Lasso regression. They are used to fit the Franke function, which is a weighted sum of four exponential components. I use cross validation to evaluate the regression models. There are two datasets. One is random generated from uniform distribution and another is a patch of digital elevation model from Shuttle Radar Topography Mission (SRTM). 
+\section{Methods}\label{sec:methods}
+\subsection{Franke's function}
+The Franke's function is a weighted sum of four exponential as shown below. This function is widely used when testing various  interpolation and fitting algorithms \cite{Hjorth_Jensen}.
+\begin{align*}
+f(x,y) &= \frac{3}{4}\exp{\left(-\frac{(9x-2)^2}{4} - \frac{(9y-2)^2}{4}\right)}+\frac{3}{4}\exp{\left(-\frac{(9x+1)^2}{49}- \frac{(9y+1)}{10}\right)} \\
+&+\frac{1}{2}\exp{\left(-\frac{(9x-7)^2}{4} - \frac{(9y-3)^2}{4}\right)} -\frac{1}{5}\exp{\left(-(9x-4)^2 - (9y-7)^2\right) }.
+\end{align*}
+where $x,y\in [0,1]$.
+\subsection{General linear models}
+Linear models can be written as 
+$$
+y=ax+b
+$$
+The input $x$, parameters and $y$ can be extended to a vector
+$$
+\hat{y} = [y_0,y_1, y_2,\dots, y_{n-1}]^T,
+$$
+$$
+\hat{\beta} = [\beta_0,\beta_1, \beta_2,\dots, \beta_{n-1}]^T,
+$$
+$$
+\hat{\epsilon} = [\epsilon_0,\epsilon_1, \epsilon_2,\dots, \epsilon_{n-1}]^T,
+$$
+$$
+\hat{X}=
+\begin{bmatrix} 
+1& x_{0}^1 &x_{0}^2& \dots & \dots &x_{0}^{n-1}\\
+1& x_{1}^1 &x_{1}^2& \dots & \dots &x_{1}^{n-1}\\
+1& x_{2}^1 &x_{2}^2& \dots & \dots &x_{2}^{n-1}\\                      
+\dots& \dots &\dots& \dots & \dots &\dots\\
+1& x_{n-1}^1 &x_{n-1}^2& \dots & \dots &x_{n-1}^{n-1}\\
+\end{bmatrix}
+$$
+ Therefore, the general model can be written as 
+$$
+\hat{y}= \hat{X}\hat{\beta}
+$$
+In this model, $X$ are inputs and $\beta$ are parameters to estimate.
+\subsection{Ordinary Least Squares}
+The Ordinary Least Squares regression minimize the squared error to find the $\beta$. The objective function is
+$$
+\left | y - \hat{X}\hat{\beta}  \right |^{2}
+$$
+If the matrix $\hat{X}^T\hat{X}$ is invertible, the parameter $\hat{\beta}$ is
+$$
+\hat{\beta} =\left(\hat{X}^T\hat{X}\right)^{-1}\hat{X}^{T}y.
+$$
+The estimate of $\beta$ is only well-defined if $(\hat{X}^{T}\hat{X})^{-1}$ exits. 
+\subsection{Ridge regression}
+If $\hat{X}^T\hat{X}$ is not invertible, the parameters $\beta_i$ cannot be found. This is very likely, when the matrix $\hat{X}$ is high-dimensional. To solve this problem, a  diagonal component can be added to the matrix to make it invertible. Therefore, $\hat{X}^{T} \hat{X}$ can be written as $\hat{X}^{T} \hat{X}+\lambda \hat{I}$, where $\hat{I}$ is the identity matrix. The objective function becomes
+$$
+\left |y - \hat{X}\hat{\beta}  \right |^{2} + \lambda \left | \hat{\beta}  \right |^{2}
+$$
+The estimate of  $\hat{\beta}$ becomes
+$$
+\hat{\beta} =\left(\hat{X}^T\hat{X}+\lambda I \right)^{-1} \hat{X}^{T}y
+$$
+\subsection{Lasso regression}
+When there are many features in models, we only want to keep the most important features. Therefore, we conduct a process called regularization. Lasso regression is a common modeling technique to do regularization. Lasso regression performs L1 regularization, i.e. it adds a factor of sum of absolute value of coefficients in the optimization objective \cite{Sunil}. This is done by introducing a parameter $\alpha$ and the optimization function becomes 
+$$
+\left | y -\hat{X}\hat{\beta}  \right |^{2} + \alpha \left | \hat{\beta}  \right |
+$$
+When  $alpha$ is 0, Lasso regression is the same as OLS. When $\alpha$ is high, the most feature coefficients are close to zero.
+\section{Implementations}\label{sec:Implementations}
+The scripts are written in python and R. The calculation for each task is written in a stand alone  python script and the figures are plotted by R. Table \ref{tabScripts} gives an overview of scripts and their functions. Scripts can be downloaded from \url{https://github.com/honglioslo/FYS-STK4155_P1} \href{https://github.com/honglioslo/FYS-STK4155_P1}.
+\begin{table}[htbp]
+\centering
+\small
+\setlength\tabcolsep{2pt}
+\caption{Overview of scripts and their functions.}
+\label{tabScripts}
+\begin{tabular}{ll}
+\hline
+Name                 & Function                                                               \\
+\hline
+P1\_OLS.ipynb      & Perform the OLS regression based on generated data and do cross validation                                                         \\
+P1\_Ridge.ipynb      & Find $\lambda$ for the Ridge regression based on generated data and do cross validation                                                         \\
+P1\_Ridge-0.01.ipynb & Perform Ridge regression with $\lambda$ is 0.01 based on generated data \\
+P1\_Lasso.ipynb      & Find $\alpha$ for the Lasso regression based on generated data and do cross validation                                                         \\
+P1\_Lasso-10e-20.ipynb & Perform the Lasso regression with $\alpha$ is 10e$^{20}$ based on generated data \\
+real\_dataOLS.ipynb & Perform the OLS regression based on SRTM DTM    \\
+real\_dataRidge.ipynb & Perform the Ridge regression based on SRTM DTM    \\
+real\_dataLasso.ipynb & Perform the Lasso regression based on SRTM DTM    \\
+plot\_fig1\_RidgeLambda.R & Plot Figure  1 and show the sensitivity of $\lambda$ for the Ridge regression     \\
+plot\_fig2\_LassoAlpha.R & Plot Figure  2 and show the sensitivity of $\alpha$ for the Lasso regression     \\
+plot\_fig3\_MSE\_R2.R & Plot Figure  3 and show performance of the OLS, Ridge and Lasso regression methods \\
+plot\_fig4\_beta\_stability.R & Plot Figure  4 and show stability of $\beta$ \\
+plot\_fig5\_realdata.R & Plot Figure  5 and show regression results based on SRTM DTM \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Results and Analysis}\label{sec:analysis}
+\subsection{Determine $\lambda$ and $\alpha$}
+To use the Ridge and Lasso regression methods, I have to determine $\lambda$ and $\alpha$ first. This is done by manual calibration. Criteria Mean Squared error (MSE) and R$^{2}$ score function. Results are shown in Figure \ref{figRidgeLambda} and Figure \ref{figLassoAlpha} respectively for the Ridge and Lasso regression methods.
+\begin{figure}[htbp]
+    \centering
+    \subfloat[]{
+        \includegraphics[width=0.5\textwidth] {Ridge_MSE.png}
+   }
+   \subfloat[]{
+        \includegraphics[width=0.5\textwidth] {Ridge_R2.png}
+   }
+   \caption{Changes of MSE and $R^2$ with $\lambda$. The blue line shows the median of cross validation results. The gray shade shows the 95\% confidence of cross validation, where 80\% data is used to train model and 20\% is used to test model for 1000 times.}
+   \label{figRidgeLambda}
+\end{figure}
+\newline\newline
+As shown in Figure \ref{figRidgeLambda}, the Ridge regression performance slightly decreases with $\lambda$. The decrease is not obvious for the whole dataset, but is noticeable for the cross validation. It is fair to say that model performance is not sensitive to $\lambda$ in this case. When $\lambda$ is 0, Ridge regression produces the same results as the OLS regression. Therefore, a small $\lambda$ value, 0.01 is used in future analysis.
+\begin{figure}[htbp]
+    \centering
+    \subfloat[]{
+        \includegraphics[width=0.5\textwidth] {Lasso_MSE.png}
+   }
+   \subfloat[]{
+        \includegraphics[width=0.5\textwidth] {Lasso_R2.png}
+   }
+   \caption{Changes of MSE and $R^2$ with $\alpha$. The blue line shows the median of cross validation results. The gray shade shows the 95\% confidence of cross validation, where 80\% data is used to train model and 20\% is used to test model for 1000 times.}
+   \label{figLassoAlpha}
+\end{figure}
+\newline\newline
+As shown in Figure \ref{figLassoAlpha}, the Lasso regression performance decrease with $\alpha$. The decreasing trend is noticeable when $\alpha$ is larger than 10$^{-8}$. When $\alpha$ is larger than 10$^{-8}$, the decreasing trend is very small. Therefore, a small $\alpha$ value, 1e-20 is used in future analysis.
+
+\subsection{Model performance on generated data}
+As shown in Figure \ref{figMSE_R2}, the three regression methods show comparable performance. The $R^2$ for the whole dataset is 0.48, as shown by the black dots. The blue dots, the cross validation results distributed around. There are more blue dots close to the black dot and less blue dots far away from the black one. The Ridge regression is slightly better than other two other methods. However, there are also several blue dots which are far from the center of the dots cloud.
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{MSE_R2.png}
+\caption{Performance of the three methods, shown by MSE and R$^{2}$. The blue points show results by cross validation and the black point shows results for the whole data.}
+\label{figMSE_R2}
+\end{figure}
+
+\subsection{Stability of $\beta$}
+The stability of $\beta$ is also an important aspect to evaluate models. Figure \ref{figStability} shows estimate of $\beta$ and its first and third quantiles. Though all the methods are linear models, but the values of $\beta$ are not comparable, especially by the Lasso method. Most of the $\beta$ for the Lasso regression are close to zero, which is a sign of the parameter $\alpha$ is too large. As seen from Figure \ref{figMSE_R2}, the Ridge regression is the best in terms of MSE and R$^{2}$. This method is also the most unstable shown by the large error bars in Figure \ref{figStability}. It may cause problems when we apply this method.
+\begin{figure}[H]
+\centering
+\includegraphics[width=1\textwidth]{parameters_int.png}\label{figParameter}
+\caption{Estimate of $\beta$ and its 95\% confidence intervals.}
+\label{figStability}
+\end{figure}
+\subsection{Performance on STRM}
+The three regression methods are future used to interpolate SRTM DTM. The true and fitted heights for the four pitches are shown in Figure \ref{figPitches}. As we can see, the three models are also almost the same. The results for the whole SRTM DTM are summarized in Table \ref{tabWhole} and it shows three methods are almost the same.
+\newline\newline
+The regression methods work well on Pitch 1 and Pitch 3 and less on Pitch 2 and Pitch 4. To explore why the regression methods have different performance on the four pitches, I plot the true terrain surface in Figure  \ref{figTrueDTM}. In Pitch 2 and 4, the terrain rises and falls. However, in Pitch 1 and Pitch 3, the terrain is not so complex. The complexity of terrain is the reason for the varied performance of the regression methods.
+\begin{figure}[htbp]
+    \centering
+    \subfloat[(a)]{
+        \includegraphics[width=0.8\textwidth] {pitch_1.png}
+        }
+\newline
+    \subfloat[(b)]{
+        \includegraphics[width=0.8\textwidth] {pitch_2.png}
+        }
+\newline 
+    \subfloat[(c)]{
+        \includegraphics[width=0.8\textwidth] {pitch_3.png}
+        }
+\newline
+    \subfloat[(d)]{
+        \includegraphics[width=0.8\textwidth] {pitch_4.png}
+	} 
+    \caption{Scatter plots of true and fitted DTM for four pitches.}
+    \label{figPitches}
+\end{figure}
+
+\begin{table}[htb]
+\centering
+\caption{Error of the regression method when interpolating the whole SRTM DTM. The red line is $y = x$.}
+\label{tabWhole}
+\begin{tabular}{lllll}
+\hline
+Method & MSE        & R$^{2} $    & Variance    & Bias       \\
+\hline
+OLS    & 42617 & 0.5373     & 49491 & 92109            \\
+Ridge  & 42617 & 0.5373     & 49491 & 92109            \\
+Lasso  & 42950 & 0.5337     & 48925 & 92109       \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \subfloat[(a)]{
+        \includegraphics[width=0.5\textwidth] {p1.png}
+        }
+    \subfloat[(b)]{
+        \includegraphics[width=0.5\textwidth] {p2.png}
+        }
+\newline 
+    \subfloat[(c)]{
+        \includegraphics[width=0.5\textwidth] {p3.png}
+        }
+    \subfloat[(d)]{
+        \includegraphics[width=0.5\textwidth] {p4.png}
+	} 
+    \caption{True DTM of the four pitches.}
+    \label{figTrueDTM}
+\end{figure}
+
+\section{Conclusions}\label{sec:conclusions}
+The main objective is to see details of three regression methods, i.e. the OLS regression, Ridge regression and Lasso regression. This report uses the regression methods to fit a weighted sum of four exponential components at the fifth orders of two independent variables. First, the regression methods are compared based a random generated data. The results show that the three regression methods are very similar. The Ridge regression method is slightly better in terms of MSE and $R^{2}$. However, this regression method is also worse in terms of parameter's stability. Second, the three regression methods are applied to interpolate a digital terrain model. The results confirm that the three regression methods are very similar and model accuracy mainly depends on the terrain. When the terrain rises and falls, the model accuracy decreases.  
+\section{Reference}\label{sec:reference}
+\bibliographystyle{plain}
+\bibliography{library}
+\end{document}
